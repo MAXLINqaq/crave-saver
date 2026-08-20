@@ -1,9 +1,5 @@
 package com.cravesaver.ui.add
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,41 +29,29 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.cravesaver.data.SavingRecord
 import com.cravesaver.util.formatCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecordScreen(
     viewModel: AddRecordViewModel,
+    recordType: Int,
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-
-    // Photo Picker 选图（无需存储权限），选中后交给 ViewModel 做 AI 识别
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) viewModel.recognizeFromScreenshot(context, uri)
-    }
 
     // 保存成功后自动返回首页
     LaunchedEffect(state.saved) {
         if (state.saved) onBack()
     }
 
-    // 一次性 Toast（如 AI 失败降级提示）
-    LaunchedEffect(Unit) {
-        viewModel.toast.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("记一笔") },
+                title = { Text(if (recordType == SavingRecord.TYPE_ATE) "吃一笔" else "记一笔·忍住") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -85,22 +68,6 @@ fun AddRecordScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 从支付页截图导入：AI 识别店名/菜品/金额并预填表单（需先配置 API Key）
-            OutlinedButton(
-                onClick = {
-                    pickImageLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                },
-                enabled = !state.recognizing,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.recognizing) "AI 识别中…" else "从截图导入")
-            }
-            state.ocrMessage?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
-            }
-
             OutlinedTextField(
                 value = state.storeName,
                 onValueChange = viewModel::onStoreNameChange,

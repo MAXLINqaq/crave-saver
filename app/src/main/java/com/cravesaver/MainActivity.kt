@@ -11,7 +11,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.cravesaver.data.AppDatabase
+import com.cravesaver.data.SavingRecord
 import com.cravesaver.data.SavingRepository
 import com.cravesaver.settings.AiConfigStore
 import com.cravesaver.settings.CycleConfigStore
@@ -26,6 +29,7 @@ import com.cravesaver.ui.history.CycleHistoryViewModel
 import com.cravesaver.ui.home.HomeScreen
 import com.cravesaver.ui.home.HomeViewModel
 import com.cravesaver.ui.theme.CraveSaverTheme
+import com.cravesaver.util.Notifications
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +39,7 @@ class MainActivity : ComponentActivity() {
         val repository = SavingRepository(AppDatabase.get(applicationContext).savingRecordDao())
         val aiConfigStore = AiConfigStore(applicationContext)
         val cycleConfigStore = CycleConfigStore(applicationContext)
+        Notifications.ensureChannel(applicationContext)
         setContent {
             CraveSaverTheme {
                 AppNavHost(repository, aiConfigStore, cycleConfigStore)
@@ -53,22 +58,28 @@ fun AppNavHost(
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
             val viewModel: HomeViewModel = viewModel(factory = viewModelFactory {
-                initializer { HomeViewModel(repository, cycleConfigStore) }
+                initializer { HomeViewModel(repository, cycleConfigStore, aiConfigStore) }
             })
             HomeScreen(
                 viewModel = viewModel,
-                onAddClick = { navController.navigate("add") },
+                onAddClick = { type -> navController.navigate("add/$type") },
                 onHistoryClick = { navController.navigate("cycle_history") },
                 onCycleSettingsClick = { navController.navigate("cycle_settings") },
                 onSettingsClick = { navController.navigate("settings") }
             )
         }
-        composable("add") {
+        composable(
+            route = "add/{recordType}",
+            arguments = listOf(navArgument("recordType") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val recordType = backStackEntry.arguments?.getInt("recordType")
+                ?: SavingRecord.TYPE_RESISTED
             val viewModel: AddRecordViewModel = viewModel(factory = viewModelFactory {
-                initializer { AddRecordViewModel(repository, aiConfigStore) }
+                initializer { AddRecordViewModel(repository, recordType) }
             })
             AddRecordScreen(
                 viewModel = viewModel,
+                recordType = recordType,
                 onBack = { navController.popBackStack() }
             )
         }

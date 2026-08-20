@@ -15,15 +15,11 @@ interface SavingRecordDao {
     @Delete
     suspend fun delete(record: SavingRecord)
 
-    /** 全部记录，按时间倒序 */
+    /** 全部记录（两种类型），按时间倒序，历史周期页用 */
     @Query("SELECT * FROM saving_records ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<SavingRecord>>
 
-    /** 累计总额（分），无记录时为 0 */
-    @Query("SELECT COALESCE(SUM(totalCents), 0) FROM saving_records")
-    fun observeTotalCents(): Flow<Long>
-
-    /** 某段时间内的总额（分），用于"本月"统计 */
-    @Query("SELECT COALESCE(SUM(totalCents), 0) FROM saving_records WHERE createdAt >= :startMillis AND createdAt < :endMillis")
-    fun observeTotalCentsBetween(startMillis: Long, endMillis: Long): Flow<Long>
+    /** 指定类型的记录，按时间倒序，主页分页用 */
+    @Query("SELECT * FROM saving_records WHERE type = :type ORDER BY createdAt DESC")
+    fun observeByType(type: Int): Flow<List<SavingRecord>>
 }

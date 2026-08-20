@@ -13,14 +13,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 
-/** 一个周期的汇总：起止、总额、笔数、明细 */
+/** 一个周期的汇总：起止、忍住/吃了总额、笔数、明细 */
 data class CycleSummary(
     val period: CyclePeriod,
-    val totalCents: Long,
+    val resistedCents: Long,
+    val ateCents: Long,
     val recordCount: Int,
     val records: List<SavingRecord>,
     val isCurrent: Boolean = false
-)
+) {
+    /** 净攒 = 忍住 − 吃了（可为负） */
+    val netCents: Long get() = resistedCents - ateCents
+}
 
 class CycleHistoryViewModel(
     repository: SavingRepository,
@@ -46,7 +50,12 @@ class CycleHistoryViewModel(
                 }
                 CycleSummary(
                     period = p,
-                    totalCents = periodRecords.sumOf { it.totalCents },
+                    resistedCents = periodRecords
+                        .filter { it.type == SavingRecord.TYPE_RESISTED }
+                        .sumOf { it.totalCents },
+                    ateCents = periodRecords
+                        .filter { it.type == SavingRecord.TYPE_ATE }
+                        .sumOf { it.totalCents },
                     recordCount = periodRecords.size,
                     records = periodRecords,
                     isCurrent = p == current

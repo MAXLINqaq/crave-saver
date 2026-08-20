@@ -115,8 +115,14 @@ private fun CycleCard(
                         }
                     }
                     Text(
-                        "${formatCents(summary.totalCents)}　·　${summary.recordCount} 笔",
+                        "忍住 ${formatCents(summary.resistedCents)}　·　" +
+                            "吃了 ${formatCents(summary.ateCents)}　·　" +
+                            "净攒 ${formatCents(summary.netCents)}",
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "${summary.recordCount} 笔",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Icon(
@@ -151,7 +157,12 @@ private fun HistoryRecordRow(record: SavingRecord) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(record.storeName, style = MaterialTheme.typography.bodyMedium)
+            // 文字标签区分类型：【忍住】/【吃了】
+            Text(
+                (if (record.type == SavingRecord.TYPE_ATE) "【吃了】" else "【忍住】") +
+                    record.storeName,
+                style = MaterialTheme.typography.bodyMedium
+            )
             Text(dateText, style = MaterialTheme.typography.bodySmall)
         }
         Text(
