@@ -55,4 +55,5 @@ dependencies {
     implementation(libs.mlkit.text.recognition.chinese)
     implementation(libs.okhttp)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    testImplementation(libs.junit)
 }

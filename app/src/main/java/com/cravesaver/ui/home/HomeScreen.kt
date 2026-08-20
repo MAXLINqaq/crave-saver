@@ -11,7 +11,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +47,8 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: HomeViewModel,
     onAddClick: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onCycleSettingsClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -54,8 +58,14 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("忍住记") },
                 actions = {
+                    IconButton(onClick = onHistoryClick) {
+                        Icon(Icons.Default.DateRange, contentDescription = "历史周期")
+                    }
+                    IconButton(onClick = onCycleSettingsClick) {
+                        Icon(Icons.Default.Refresh, contentDescription = "周期设置")
+                    }
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "设置")
+                        Icon(Icons.Default.Settings, contentDescription = "AI 设置")
                     }
                 }
             )
@@ -74,37 +84,53 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // 顶部统计：累计总额 + 本月
+            // 顶部统计：本周期总额 + 周期信息
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("累计忍住没花", style = MaterialTheme.typography.titleMedium)
+                Text("本周期忍住没花", style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = formatCents(state.totalCents),
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = "本月：${formatCents(state.monthCents)}",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+            }
+
+            // 周期信息卡：起止日期、剩余天数、笔数/记录天数、连续忍住天数
+            state.period?.let { period ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "周期：${period.start} ~ ${period.endInclusive}（还剩 ${state.daysRemaining} 天）",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "本周期 ${state.recordCount} 笔 / ${state.recordDays} 天" +
+                                "　·　连续忍住 ${state.streakDays} 天",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             }
 
             if (state.records.isEmpty()) {
                 // 空列表引导
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "还没有攒下钱\n\n下次点外卖走到支付页时，忍住不付款，\n点右下角「记一笔」把这笔钱攒下来",
+                        text = "本周期还没有攒下钱\n\n下次点外卖走到支付页时，忍住不付款，\n点右下角「记一笔」把这笔钱攒下来",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(state.records, key = { it.id }) { record ->
                         RecordItem(record = record, onDelete = { viewModel.delete(record) })
                     }
