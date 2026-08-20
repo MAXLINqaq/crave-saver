@@ -1,5 +1,8 @@
 package com.cravesaver.ui.add
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cravesaver.util.formatCents
@@ -40,6 +45,14 @@ fun AddRecordScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Photo Picker 选图（无需存储权限），选中后交给 ViewModel 做 OCR
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) viewModel.recognizeFromScreenshot(context, uri)
+    }
 
     // 保存成功后自动返回首页
     LaunchedEffect(state.saved) {
@@ -66,6 +79,22 @@ fun AddRecordScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // 从支付页截图导入：OCR 识别店名/金额并预填表单
+            OutlinedButton(
+                onClick = {
+                    pickImageLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                enabled = !state.recognizing,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (state.recognizing) "识别中…" else "从截图导入")
+            }
+            state.ocrMessage?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
+
             OutlinedTextField(
                 value = state.storeName,
                 onValueChange = viewModel::onStoreNameChange,
