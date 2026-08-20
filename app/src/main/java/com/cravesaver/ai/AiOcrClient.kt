@@ -56,7 +56,7 @@ class AiOcrClient(private val config: AiConfig) {
 
     /**
      * 把 JPEG 字节发给视觉模型识别。
-     * 非 200、超时、解析异常等一律抛异常，由调用方降级到本地识别。
+     * 非 200、超时、解析异常等一律抛异常，由调用方统一处理（Toast 提示重试）。
      */
     suspend fun recognize(jpegBytes: ByteArray): AiOcrResult = withContext(Dispatchers.IO) {
         val base64 = android.util.Base64.encodeToString(jpegBytes, android.util.Base64.NO_WRAP)
@@ -75,7 +75,9 @@ class AiOcrClient(private val config: AiConfig) {
             )
                 .choices.firstOrNull()?.message?.content
                 ?: throw IOException("AI 返回格式异常")
-            json.decodeFromString<AiOcrResult>(stripCodeFence(content))
+            val result = json.decodeFromString<AiOcrResult>(stripCodeFence(content))
+            // 模型偶尔会给已免除的费用列 0 元行，直接丢弃
+            result.copy(items = result.items?.filter { it.price != 0.0 })
         }
     }
 
@@ -115,8 +117,11 @@ class AiOcrClient(private val config: AiConfig) {
     companion object {
         private val PROMPT = """
 这是一张外卖/电商的下单支付确认页截图。请提取信息，只返回 JSON，不要多余文字：
-{"store": 店名字符串, "items": [{"name": 菜品名, "price": 单价数字}], "total": 应付总额数字}
-规则：total 取页面上最终需支付的金额（合计/实付/立即支付按钮上的金额，注意有优惠时取优惠后的）；price 取每个菜品优惠后的实付单价，没有优惠价就取原价；提取不到的字段给 null。
+{"store": 店名字符串, "items": [{"name": 名称, "price": 行金额数字}], "total": 应付总额数字}
+规则：
+1. items 包含每个菜品，price 取该行的实付小计（数量×单价，优惠后；同一菜品多份按该行总额填，不是单价），并把打包费、配送费等额外费用各作为单独一条 item 列入（如 {"name":"打包费","price":3}）；红包、满减等减免不计入 items；划线/删除线的价格和已免除的费用（如标注“免配送费”“惊喜免配送费”或为 0 元的费用）不要列入
+2. total 取页面最终需支付金额（合计/实付/立即支付按钮上的金额），必须包含所有费用；items 之和应与 total 一致
+3. 提取不到的字段给 null
         """.trimIndent()
     }
 }

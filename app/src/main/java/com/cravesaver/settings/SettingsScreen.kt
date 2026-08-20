@@ -54,8 +54,8 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "配置 OpenAI 兼容接口后，「记一笔」页的截图导入会优先用 AI 识别；" +
-                    "不填 API Key 则用手机本地识别。配置只保存在本机。",
+                "配置 OpenAI 兼容接口后，「记一笔」页可用 AI 识别支付页截图；" +
+                    "不填 API Key 则无法使用截图导入。配置只保存在本机。",
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -81,7 +81,7 @@ fun SettingsScreen(
                 value = state.apiKey,
                 onValueChange = viewModel::onApiKeyChange,
                 label = { Text("API Key") },
-                placeholder = { Text("留空则使用本地识别") },
+                placeholder = { Text("必填，否则无法使用截图导入") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
