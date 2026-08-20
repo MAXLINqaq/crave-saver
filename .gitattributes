@@ -1,0 +1,4 @@
+# 统一行尾：仓库内文本文件用 LF，Windows 批处理用 CRLF
+* text=auto
+gradlew text eol=lf
+*.bat text eol=crlf
