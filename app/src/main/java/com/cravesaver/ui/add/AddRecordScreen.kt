@@ -1,5 +1,6 @@
 package com.cravesaver.ui.add
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,6 +60,11 @@ fun AddRecordScreen(
         if (state.saved) onBack()
     }
 
+    // 一次性 Toast（如 AI 失败降级提示）
+    LaunchedEffect(Unit) {
+        viewModel.toast.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,7 +85,7 @@ fun AddRecordScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 从支付页截图导入：OCR 识别店名/金额并预填表单
+            // 从支付页截图导入：配了 API key 走 AI 识别，否则用 ML Kit 本地识别
             OutlinedButton(
                 onClick = {
                     pickImageLauncher.launch(
@@ -89,7 +95,13 @@ fun AddRecordScreen(
                 enabled = !state.recognizing,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (state.recognizing) "识别中…" else "从截图导入")
+                Text(
+                    when {
+                        state.recognizingByAi -> "AI 识别中…"
+                        state.recognizing -> "识别中…"
+                        else -> "从截图导入"
+                    }
+                )
             }
             state.ocrMessage?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall)
