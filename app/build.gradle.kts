@@ -6,6 +6,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// 固定签名 release：keystore.p12（项目根目录，PKCS12）+ 三个环境变量都在时才用自己的签名；
+// 否则 release 回落 debug 签名，保证任何人 clone 下来都能编过。
+val releaseKeystore = rootProject.file("keystore.p12")
+val signStorePassword = System.getenv("SIGNING_STORE_PASSWORD")
+val signKeyAlias = System.getenv("SIGNING_KEY_ALIAS")
+val signKeyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+val canSignRelease = releaseKeystore.exists() &&
+    !signStorePassword.isNullOrBlank() &&
+    !signKeyAlias.isNullOrBlank() &&
+    !signKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.cravesaver"
     compileSdk = 35
@@ -18,9 +29,26 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (canSignRelease) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = signStorePassword
+                keyAlias = signKeyAlias
+                keyPassword = signKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // 有正式签名材料用正式签名，否则回落 debug 签名
+            signingConfig = if (canSignRelease) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

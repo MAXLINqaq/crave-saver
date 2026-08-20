@@ -23,14 +23,25 @@ jobs:
         with:
           validate-wrappers: true
 
+      - name: Decode release keystore
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > keystore.p12
+
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+      - name: Build release APK
+        run: ./gradlew :app:assembleRelease --stacktrace
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
 
-      - name: Upload debug APK
+      - name: Clean up keystore
+        if: always()
+        run: rm -f keystore.p12
+
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: crave-saver-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: crave-saver-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
