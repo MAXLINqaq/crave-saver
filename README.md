@@ -23,7 +23,7 @@
 
 ## 下载安装
 
-[Releases](../../releases) 页下载 APK 直接安装（debug 签名，手机需允许"安装未知来源应用"）。
+[Releases](../../releases) 页下载 APK 直接安装（手机需允许"安装未知来源应用"）。APK 用固定密钥签名，新版本可直接覆盖安装，数据不丢。
 
 ## AI 配置
 
@@ -39,7 +39,7 @@
 
 ## 技术栈
 
-单模块 MVVM：Kotlin 2.0 + Jetpack Compose（Material3）+ Room + Navigation + WorkManager + OkHttp，CI（GitHub Actions）跑单元测试 + 出 debug APK。最低 Android 8.0（API 26）。
+单模块 MVVM：Kotlin 2.0 + Jetpack Compose（Material3）+ Room + Navigation + WorkManager + OkHttp，CI（GitHub Actions）跑单元测试 + 出固定签名的 release APK。最低 Android 8.0（API 26）。
 
 ```text
 app/src/main/java/com/cravesaver/
@@ -74,8 +74,8 @@ app/src/main/java/com/cravesaver/
 - [x] 周期统计（按月/固定天数可自定义）+ 连续忍住天数
 - [x] 吃一笔（实际消费记录）+ 净攒统计
 - [x] 截图后台识别免确认自动入账（WorkManager + 通知）
-- [ ] 固定签名 Release 包（覆盖安装不丢数据）
-- [ ] 记录编辑、重复导入去重
+- [x] 固定签名 Release 包（覆盖安装不丢数据）
+- [x] 记录编辑、重复导入去重
 - [ ] （远期）桌面小组件、周期趋势图、iOS 版本
 
 ## License

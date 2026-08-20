@@ -7,36 +7,41 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,11 +54,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cravesaver.data.DishItem
 import com.cravesaver.data.SavingRecord
+import com.cravesaver.ui.theme.AteGreen
+import com.cravesaver.ui.theme.ResistedOrange
 import com.cravesaver.util.CyclePeriod
 import com.cravesaver.util.Notifications
+import com.cravesaver.util.centsToYuanText
 import com.cravesaver.util.formatCents
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
@@ -61,9 +71,7 @@ import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-/** "吃一笔"页的绿色强调色 */
-private val AteGreen = Color(0xFF2E7D32)
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +92,7 @@ fun HomeScreen(
     } else {
         SavingRecord.TYPE_ATE
     }
+    val currentAccent = if (currentType == SavingRecord.TYPE_ATE) AteGreen else ResistedOrange
 
     // 通知权限：API 33+ 主页首次启动请求一次，拒绝后不再打扰
     val notifPermissionLauncher = rememberLauncherForActivityResult(
@@ -139,14 +148,12 @@ fun HomeScreen(
                 ) {
                     Text("截图导入")
                 }
-                val isAtePage = currentType == SavingRecord.TYPE_ATE
-                val fabContainer = if (isAtePage) AteGreen else FloatingActionButtonDefaults.containerColor
                 ExtendedFloatingActionButton(
                     onClick = { onAddClick(currentType) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(if (isAtePage) "吃一笔" else "记一笔") },
-                    containerColor = fabContainer,
-                    contentColor = if (isAtePage) Color.White else contentColorFor(fabContainer)
+                    text = { Text(if (currentType == SavingRecord.TYPE_ATE) "吃一笔" else "记一笔") },
+                    containerColor = currentAccent,
+                    contentColor = Color.White
                 )
             }
         }
@@ -156,17 +163,33 @@ fun HomeScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 分段提示：忍住 / 吃了，点击或左右滑动切换
-            TabRow(selectedTabIndex = pagerState.currentPage) {
+            // 分段提示：忍住 / 吃了，点击或左右滑动切换；指示器跟当前页强调色
+            TabRow(
+                selectedTabIndex = pagerState.currentPage,
+                indicator = { tabPositions ->
+                    if (pagerState.currentPage < tabPositions.size) {
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = with(TabRowDefaults) {
+                                Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage])
+                            },
+                            color = currentAccent
+                        )
+                    }
+                }
+            ) {
                 Tab(
                     selected = pagerState.currentPage == 0,
                     onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text("忍住没花") }
+                    text = { Text("忍住没花") },
+                    selectedContentColor = ResistedOrange,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Tab(
                     selected = pagerState.currentPage == 1,
                     onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text("吃过了") }
+                    text = { Text("吃过了") },
+                    selectedContentColor = AteGreen,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -207,14 +230,14 @@ private fun HomePage(
     onEdit: (SavingRecord) -> Unit,
     onDelete: (SavingRecord) -> Unit
 ) {
-    val accent = if (isAtePage) AteGreen else MaterialTheme.colorScheme.primary
+    val accent = if (isAtePage) AteGreen else ResistedOrange
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        // 顶部大数字：本周期该类型总额
+        // 顶部大数字：本周期该类型总额，¥ 符号小一号
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -225,27 +248,42 @@ private fun HomePage(
                 if (isAtePage) "本周期吃了" else "本周期忍住没花",
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                text = formatCents(pageState.totalCents),
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold,
-                color = accent
-            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = if (pageState.totalCents < 0) "-¥" else "¥",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+                Text(
+                    text = centsToYuanText(abs(pageState.totalCents)),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+            }
         }
 
-        // 周期信息卡：起止/剩余天数、笔数/记录天数、连续忍住、净攒（两页都显示）
+        // 周期信息卡：起止日期 + 指标 chips + 净攒（两页都显示）
         period?.let {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        "周期：${it.start} ~ ${it.endInclusive}（还剩 $daysRemaining 天）",
+                        "周期：${it.start} ~ ${it.endInclusive}",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Text(
-                        "本周期 ${pageState.recordCount} 笔 / ${pageState.recordDays} 天" +
-                            "　·　连续忍住 $streakDays 天",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MetricChip("$daysRemaining", "剩余天数", Modifier.weight(1f))
+                        MetricChip("${pageState.recordCount}", "本周期笔数", Modifier.weight(1f))
+                        MetricChip("${pageState.recordDays}", "记录天数", Modifier.weight(1f))
+                        MetricChip("$streakDays", "连续忍住", Modifier.weight(1f))
+                    }
                     Text(
                         "净攒 ${formatCents(netCents)}" +
                             "（忍住 ${formatCents(resistedTotalCents)} − 吃了 ${formatCents(ateTotalCents)}）",
@@ -256,15 +294,28 @@ private fun HomePage(
         }
 
         if (pageState.records.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // 空状态：图标 + 引导文案
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    if (isAtePage) Icons.Default.ShoppingCart else Icons.Default.Favorite,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = if (isAtePage) {
-                        "本周期还没有「吃一笔」记录\n\n没忍住也没关系，记下来看看净攒"
+                        "本周期还没有「吃一笔」记录\n没忍住也没关系，记下来看看净攒"
                     } else {
-                        "本周期还没有攒下钱\n\n下次点外卖走到支付页时，忍住不付款，\n点右下角「记一笔」把这笔钱攒下来"
+                        "本周期还没有攒下钱\n下次忍住不付款时，点右下角「记一笔」"
                     },
                     style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
@@ -288,6 +339,23 @@ private fun HomePage(
 }
 
 @Composable
+private fun MetricChip(value: String, label: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
 private fun RecordItem(
     record: SavingRecord,
     accent: Color,
@@ -299,28 +367,73 @@ private fun RecordItem(
     val dateText = remember(record.createdAt) {
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).format(Date(record.createdAt))
     }
+    val isAte = record.type == SavingRecord.TYPE_ATE
 
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp)
+    ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(record.storeName, style = MaterialTheme.typography.titleMedium)
-                if (dishesSummary.isNotBlank()) {
-                    Text(dishesSummary, style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    TypeTag(isAte)
+                    Text(
+                        record.storeName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-                Text(dateText, style = MaterialTheme.typography.bodySmall)
+                if (dishesSummary.isNotBlank()) {
+                    Text(
+                        dishesSummary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    dateText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Text(
                 text = formatCents(record.totalCents),
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 color = accent
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "删除")
             }
         }
+    }
+}
+
+@Composable
+private fun TypeTag(isAte: Boolean) {
+    val color = if (isAte) AteGreen else ResistedOrange
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = if (isAte) "吃了" else "忍住",
+            fontSize = 10.sp,
+            color = color,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+        )
     }
 }
 
