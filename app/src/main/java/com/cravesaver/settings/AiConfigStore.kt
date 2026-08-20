@@ -36,7 +36,7 @@ class AiConfigStore(context: Context) {
     companion object {
         // 默认服务：硅基流动 SiliconFlow；改默认模型只动这一行
         const val DEFAULT_BASE_URL = "https://api.siliconflow.cn/v1"
-        const val DEFAULT_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"
+        const val DEFAULT_MODEL = "Qwen/Qwen3-VL-8B-Instruct"
 
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_MODEL = "model"
