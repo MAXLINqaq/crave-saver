@@ -3,20 +3,8 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 白色 ¥：两条斜线交汇 + 竖笔 + 两条横杠 -->
+    <!-- 白色圆盘：用户审美拍板，就喜欢这个盘子 -->
     <path
-        android:pathData="M38,30 L54,46 M70,30 L54,46"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
-    <path
-        android:pathData="M54,46 L54,78"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
-    <path
-        android:pathData="M41,58 L67,58 M41,69 L67,69"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,32c-12.15,0 -22,9.85 -22,22s9.85,22 22,22 22,-9.85 22,-22 -9.85,-22 -22,-22zM54,66c-6.63,0 -12,-5.37 -12,-12s5.37,-12 12,-12 12,5.37 12,12 -5.37,12 -12,12z" />
 </vector>

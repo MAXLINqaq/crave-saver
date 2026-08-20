@@ -13,6 +13,14 @@
 2. 打开本 App 点"截图导入"，AI 自动识别店名/菜品/金额，**后台直接入账**，无需确认，切走 App 也不影响
 3. 真吃了就用"吃一笔"记下实际消费——忍住总额减去吃了总额，才是真的省下来的钱
 
+## 截图
+
+<p align="center">
+  <img src="docs/screenshots/home_resisted.jpg" width="260" alt="主页 · 忍住没花" />
+  <img src="docs/screenshots/home_ate.jpg" width="260" alt="主页 · 吃过了" />
+  <img src="docs/screenshots/add_record.jpg" width="260" alt="记一笔" />
+</p>
+
 ## 功能
 
 - **忍住记 / 吃一笔**：主页左右滑动切换，两种记录各自统计，周期信息卡显示**净攒 = 忍住 − 吃了**
