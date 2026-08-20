@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.cravesaver.data.DishItem
 import com.cravesaver.data.SavingRecord
 import com.cravesaver.data.SavingRepository
+import com.cravesaver.util.centsToYuanText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.math.BigDecimal
@@ -29,14 +31,49 @@ data class AddRecordUiState(
     val saved: Boolean = false
 )
 
-/** 手动记账表单；recordType 决定保存为"忍住"还是"吃了" */
+/**
+ * 手动记账表单。
+ * recordType 决定保存为"忍住"还是"吃了"；recordId > 0 时为编辑模式（预填表单、保存走 update）。
+ */
 class AddRecordViewModel(
     private val repository: SavingRepository,
-    private val recordType: Int
+    private val recordType: Int,
+    private val recordId: Long = -1L
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddRecordUiState())
     val uiState: StateFlow<AddRecordUiState> = _uiState.asStateFlow()
+
+    /** 编辑模式：原始创建时间，保存时保留（不然记录会跑出原来的周期） */
+    private var editingCreatedAt: Long? = null
+
+    val isEditing: Boolean get() = recordId > 0
+
+    init {
+        if (recordId > 0) {
+            viewModelScope.launch {
+                repository.getById(recordId)?.let { record ->
+                    editingCreatedAt = record.createdAt
+                    _uiState.update { state ->
+                        state.copy(
+                            storeName = record.storeName,
+                            note = record.note,
+                            dishes = parseRows(record.itemsJson).ifEmpty { listOf(DishRow()) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** itemsJson → 表单菜品行 */
+    private fun parseRows(itemsJson: String): List<DishRow> = try {
+        Json.decodeFromString<List<DishItem>>(itemsJson).map {
+            DishRow(name = it.name, priceText = centsToYuanText(it.priceCents))
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
 
     fun onStoreNameChange(value: String) = _uiState.update { it.copy(storeName = value) }
 
@@ -90,15 +127,29 @@ class AddRecordViewModel(
             .filter { it.name.isNotBlank() || parsePriceToCents(it.priceText) != null }
             .map { DishItem(name = it.name.trim(), priceCents = parsePriceToCents(it.priceText) ?: 0) }
         viewModelScope.launch {
-            repository.add(
-                SavingRecord(
-                    storeName = state.storeName.trim(),
-                    itemsJson = Json.encodeToString(items),
-                    totalCents = totalCents(state),
-                    note = state.note.trim(),
-                    type = recordType
+            if (isEditing) {
+                repository.update(
+                    SavingRecord(
+                        id = recordId,
+                        storeName = state.storeName.trim(),
+                        itemsJson = Json.encodeToString(items),
+                        totalCents = totalCents(state),
+                        note = state.note.trim(),
+                        createdAt = editingCreatedAt ?: System.currentTimeMillis(),
+                        type = recordType
+                    )
                 )
-            )
+            } else {
+                repository.add(
+                    SavingRecord(
+                        storeName = state.storeName.trim(),
+                        itemsJson = Json.encodeToString(items),
+                        totalCents = totalCents(state),
+                        note = state.note.trim(),
+                        type = recordType
+                    )
+                )
+            }
             _uiState.update { it.copy(saved = true) }
         }
     }

@@ -42,6 +42,7 @@ import java.util.Locale
 @Composable
 fun CycleHistoryScreen(
     viewModel: CycleHistoryViewModel,
+    onEditRecord: (SavingRecord) -> Unit,
     onBack: () -> Unit
 ) {
     val cycles by viewModel.uiState.collectAsState()
@@ -79,7 +80,8 @@ fun CycleHistoryScreen(
                         onToggle = {
                             val key = summary.period.start.toEpochDay()
                             expandedKey = if (expandedKey == key) null else key
-                        }
+                        },
+                        onEditRecord = onEditRecord
                     )
                 }
             }
@@ -91,7 +93,8 @@ fun CycleHistoryScreen(
 private fun CycleCard(
     summary: CycleSummary,
     expanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onEditRecord: (SavingRecord) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -137,7 +140,7 @@ private fun CycleCard(
                     Text("本周期无记录", style = MaterialTheme.typography.bodyMedium)
                 } else {
                     summary.records.forEach { record ->
-                        HistoryRecordRow(record)
+                        HistoryRecordRow(record, onClick = { onEditRecord(record) })
                     }
                 }
             }
@@ -146,13 +149,14 @@ private fun CycleCard(
 }
 
 @Composable
-private fun HistoryRecordRow(record: SavingRecord) {
+private fun HistoryRecordRow(record: SavingRecord, onClick: () -> Unit) {
     val dateText = remember(record.createdAt) {
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).format(Date(record.createdAt))
     }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

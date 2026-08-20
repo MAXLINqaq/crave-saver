@@ -63,19 +63,26 @@ fun AppNavHost(
             HomeScreen(
                 viewModel = viewModel,
                 onAddClick = { type -> navController.navigate("add/$type") },
+                onEditRecord = { record ->
+                    navController.navigate("add/${record.type}?recordId=${record.id}")
+                },
                 onHistoryClick = { navController.navigate("cycle_history") },
                 onCycleSettingsClick = { navController.navigate("cycle_settings") },
                 onSettingsClick = { navController.navigate("settings") }
             )
         }
         composable(
-            route = "add/{recordType}",
-            arguments = listOf(navArgument("recordType") { type = NavType.IntType })
+            route = "add/{recordType}?recordId={recordId}",
+            arguments = listOf(
+                navArgument("recordType") { type = NavType.IntType },
+                navArgument("recordId") { type = NavType.LongType; defaultValue = -1L }
+            )
         ) { backStackEntry ->
             val recordType = backStackEntry.arguments?.getInt("recordType")
                 ?: SavingRecord.TYPE_RESISTED
+            val recordId = backStackEntry.arguments?.getLong("recordId") ?: -1L
             val viewModel: AddRecordViewModel = viewModel(factory = viewModelFactory {
-                initializer { AddRecordViewModel(repository, recordType) }
+                initializer { AddRecordViewModel(repository, recordType, recordId) }
             })
             AddRecordScreen(
                 viewModel = viewModel,
@@ -107,6 +114,9 @@ fun AppNavHost(
             })
             CycleHistoryScreen(
                 viewModel = viewModel,
+                onEditRecord = { record ->
+                    navController.navigate("add/${record.type}?recordId=${record.id}")
+                },
                 onBack = { navController.popBackStack() }
             )
         }

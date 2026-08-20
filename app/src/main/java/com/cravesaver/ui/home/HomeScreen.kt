@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,6 +70,7 @@ private val AteGreen = Color(0xFF2E7D32)
 fun HomeScreen(
     viewModel: HomeViewModel,
     onAddClick: (Int) -> Unit,
+    onEditRecord: (SavingRecord) -> Unit,
     onHistoryClick: () -> Unit,
     onCycleSettingsClick: () -> Unit,
     onSettingsClick: () -> Unit
@@ -184,6 +186,7 @@ fun HomeScreen(
                     resistedTotalCents = state.resisted.totalCents,
                     ateTotalCents = state.ate.totalCents,
                     isAtePage = isAte,
+                    onEdit = onEditRecord,
                     onDelete = { viewModel.delete(it) }
                 )
             }
@@ -201,6 +204,7 @@ private fun HomePage(
     resistedTotalCents: Long,
     ateTotalCents: Long,
     isAtePage: Boolean,
+    onEdit: (SavingRecord) -> Unit,
     onDelete: (SavingRecord) -> Unit
 ) {
     val accent = if (isAtePage) AteGreen else MaterialTheme.colorScheme.primary
@@ -271,7 +275,12 @@ private fun HomePage(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(pageState.records, key = { it.id }) { record ->
-                    RecordItem(record = record, accent = accent, onDelete = { onDelete(record) })
+                    RecordItem(
+                        record = record,
+                        accent = accent,
+                        onClick = { onEdit(record) },
+                        onDelete = { onDelete(record) }
+                    )
                 }
             }
         }
@@ -282,6 +291,7 @@ private fun HomePage(
 private fun RecordItem(
     record: SavingRecord,
     accent: Color,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     val dishes = remember(record.itemsJson) { parseDishes(record.itemsJson) }
@@ -290,7 +300,7 @@ private fun RecordItem(
         SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).format(Date(record.createdAt))
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically

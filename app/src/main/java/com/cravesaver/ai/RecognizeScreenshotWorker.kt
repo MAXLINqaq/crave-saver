@@ -11,6 +11,7 @@ import com.cravesaver.data.AppDatabase
 import com.cravesaver.data.DishItem
 import com.cravesaver.data.SavingRecord
 import com.cravesaver.settings.AiConfigStore
+import com.cravesaver.util.Dedupe
 import com.cravesaver.util.Notifications
 import com.cravesaver.util.compressToJpeg
 import com.cravesaver.util.formatCents
@@ -49,7 +50,21 @@ class RecognizeScreenshotWorker(
                 notifyFailure()
                 return Result.failure()
             }
-            AppDatabase.get(applicationContext).savingRecordDao().insert(record)
+            val dao = AppDatabase.get(applicationContext).savingRecordDao()
+            // 去重：同类型 + 同店名 + 同金额 + 10 分钟内已有记录 → 跳过入库
+            val now = System.currentTimeMillis()
+            val similar = dao.findSimilarSince(
+                record.type, record.storeName, record.totalCents, now - Dedupe.WINDOW_MILLIS
+            )
+            if (similar != null && Dedupe.isWithinWindow(similar.createdAt, now)) {
+                Notifications.notify(
+                    applicationContext,
+                    "疑似重复导入，已忽略",
+                    "${record.storeName} ${formatCents(record.totalCents)}"
+                )
+                return Result.success()
+            }
+            dao.insert(record)
             Notifications.notify(
                 applicationContext,
                 "已记下：${record.storeName} ${formatCents(record.totalCents)}",

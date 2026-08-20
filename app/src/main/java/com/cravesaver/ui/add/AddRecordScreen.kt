@@ -51,7 +51,17 @@ fun AddRecordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (recordType == SavingRecord.TYPE_ATE) "吃一笔" else "记一笔·忍住") },
+                title = {
+                    Text(
+                        if (viewModel.isEditing) {
+                            "编辑记录"
+                        } else if (recordType == SavingRecord.TYPE_ATE) {
+                            "吃一笔"
+                        } else {
+                            "记一笔·忍住"
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
