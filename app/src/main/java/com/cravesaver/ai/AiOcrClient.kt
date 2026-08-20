@@ -70,7 +70,9 @@ class AiOcrClient(private val config: AiConfig) {
             if (!response.isSuccessful) {
                 throw IOException("AI 接口返回 HTTP ${response.code}")
             }
-            val content = json.decodeFromString<ChatResponse>(response.body.string())
+            val content = json.decodeFromString<ChatResponse>(
+                response.body?.string() ?: throw IOException("AI 返回为空")
+            )
                 .choices.firstOrNull()?.message?.content
                 ?: throw IOException("AI 返回格式异常")
             json.decodeFromString<AiOcrResult>(stripCodeFence(content))
